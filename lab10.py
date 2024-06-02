@@ -2,54 +2,48 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import freqz
 
-# Given specifications
+# Specifications
 fs = 10000  # Sampling frequency in Hz
-passband_edge = 1500  # Passband edge in Hz
+f_pass = 1500  # Passband edge in Hz
 transition_width = 500  # Transition width in Hz
-filter_length = 67  # Length of the filter
+N = 67  # Filter length
 
-# Calculate the cutoff frequency
-cutoff_freq = passband_edge + transition_width / 2
+# Calculate the normalized cutoff frequency
+f_cutoff = f_pass + transition_width / 2
+normalized_cutoff = f_cutoff / (fs / 2)
 
-# Normalized cutoff frequency
-normalized_cutoff = cutoff_freq / (fs / 2)
+# Generate the ideal lowpass filter (sinc function)
+n = np.arange(N)
+h_ideal = np.sinc(2 * normalized_cutoff * (n - (N - 1) / 2))
 
-# Ideal impulse response of the low-pass filter
-def ideal_lp(cutoff, num_taps):
-    M = num_taps - 1
-    n = np.arange(0, num_taps)
-    h = np.sinc(2 * cutoff * (n - M / 2))
-    return h
-
-# Design the low-pass filter
-h_ideal = ideal_lp(normalized_cutoff, filter_length)
-
-# Apply Blackman window
-window = np.blackman(filter_length)
-h_blackman = h_ideal * window
+# Apply the Blackman window
+blackman_window = np.blackman(N)
+h = h_ideal * blackman_window
 
 # Normalize the filter coefficients
-h_blackman /= np.sum(h_blackman)
+h = h / np.sum(h)
 
-# Frequency response of the filter
-w, h = freqz(h_blackman, worN=8000)
-
-# Plot the magnitude response
-plt.figure(figsize=(14, 7))
-plt.plot(0.5 * fs * w / np.pi, np.abs(h), 'b')
-plt.title('Lowpass Filter Frequency Response')
-plt.xlabel('Frequency (Hz)')
-plt.ylabel('Gain')
-plt.grid()
-plt.axvline(passband_edge, color='green')  # Passband edge
-plt.axvline(passband_edge + transition_width, color='red')  # Start of the stopband
-plt.show()
+# Frequency response
+w, H = freqz(h, worN=8000)
+frequencies = w * fs / (2 * np.pi)
 
 # Plot the impulse response
-plt.figure(figsize=(14, 7))
-plt.stem(h_blackman, use_line_collection=True)
-plt.title('Impulse Response of the Lowpass Filter')
-plt.xlabel('Sample')
+plt.figure(figsize=(12, 6))
+
+plt.subplot(2, 1, 1)
+plt.stem(n, h)
+plt.title('Impulse Response')
+plt.xlabel('Samples')
 plt.ylabel('Amplitude')
+
+# Plot the frequency response
+plt.subplot(2, 1, 2)
+plt.plot(frequencies, 20 * np.log10(abs(H)))
+plt.title('Frequency Response')
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Magnitude (dB)')
 plt.grid()
+plt.ylim([-100, 5])
+
+plt.tight_layout()
 plt.show()
